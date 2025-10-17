@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Signup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: flex;
+      gap: 15px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .password-hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .success {
+      background: #efe;
+      color: #3c3;
+      padding: 12px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .hidden {
+      display: none;
+    }
+    .otp-section {
+      margin-top: 20px;
+    }
+    .link {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+    .link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .resend-btn {
+      background: transparent;
+      color: #667eea;
+      border: 2px solid #667eea;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Create Account</h1>
+      <p>Sign up to get started</p>
+    </div>
+    
+    <div id="message" class="hidden"></div>
+    
+    <form id="signupForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <div class="password-hint">
+          Must be at least 8 characters with uppercase, lowercase, and number
+        </div>
+      </div>
+      
+      <button type="submit" class="btn">Sign Up</button>
+    </form>
+
+    <div id="otpSection" class="otp-section hidden">
+      <form id="otpForm">
+        <div class="form-group">
+          <label for="otp">Enter OTP</label>
+          <input type="text" id="otp" name="otp" maxlength="6" required>
+          <div class="password-hint">Check your email for the 6-digit code</div>
+        </div>
+        
+        <button type="submit" class="btn">Verify OTP</button>
+        <button type="button" class="btn resend-btn" id="resendBtn">Resend OTP</button>
+      </form>
+    </div>
+    
+    <div class="link">
+      Already have an account? <a href="/api/client/login">Login here</a>
+    </div>
+  </div>
+
+  <script>
+    let userEmail = '';
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const messageDiv = document.getElementById('message');
+      const btn = e.target.querySelector('.btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating account...';
+      
+      const formData = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      };
+      
+      userEmail = formData.email;
+      
+      try {
+        const response = await fetch('/api/client/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          messageDiv.textContent = data.message;
+          messageDiv.className = 'success';
+          document.getElementById('signupForm').classList.add('hidden');
+          document.getElementById('otpSection').classList.remove('hidden');
+        } else {
+          messageDiv.textContent = data.message || 'Signup failed';
+          messageDiv.className = 'error';
+          btn.disabled = false;
+          btn.textContent = 'Sign Up';
+        }
+      } catch (error) {
+        messageDiv.textContent = 'An error occurred. Please try again.';
+        messageDiv.className = 'error';
+        btn.disabled = false;
+        btn.textContent = 'Sign Up';
+      }
+    });
+
+    document.getElementById('otpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const messageDiv = document.getElementById('message');
+      const btn = e.target.querySelector('.btn[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      
+      const otpData = {
+        email: userEmail,
+        otp: document.getElementById('otp').value
+      };
+      
+      try {
+        const response = await fetch('/api/client/verify-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(otpData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          messageDiv.textContent = data.message + ' Redirecting...';
+          messageDiv.className = 'success';
+          setTimeout(() => {
+            window.location.href = '/api/client/login';
+          }, 2000);
+        } else {
+          messageDiv.textContent = data.message || 'Verification failed';
+          messageDiv.className = 'error';
+          btn.disabled = false;
+          btn.textContent = 'Verify OTP';
+        }
+      } catch (error) {
+        messageDiv.textContent = 'An error occurred. Please try again.';
+        messageDiv.className = 'error';
+        btn.disabled = false;
+        btn.textContent = 'Verify OTP';
+      }
+    });
+
+    document.getElementById('resendBtn').addEventListener('click', async () => {
+      const messageDiv = document.getElementById('message');
+      const btn = document.getElementById('resendBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      
+      try {
+        const response = await fetch('/api/client/resend-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: userEmail })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          messageDiv.textContent = 'OTP resent successfully!';
+          messageDiv.className = 'success';
+        } else {
+          messageDiv.textContent = data.message || 'Failed to resend OTP';
+          messageDiv.className = 'error';
+        }
+        
+        btn.disabled = false;
+        btn.textContent = 'Resend OTP';
+      } catch (error) {
+        messageDiv.textContent = 'An error occurred. Please try again.';
+        messageDiv.className = 'error';
+        btn.disabled = false;
+        btn.textContent = 'Resend OTP';
+      }
+    });
+  </script>
+</body>
+</html>
