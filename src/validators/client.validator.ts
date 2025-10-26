@@ -1,24 +1,14 @@
 import Joi from 'joi';
 
 export const clientSignupSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address',
-    'any.required': 'Email is required',
-  }),
-  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required().messages({
-    'string.min': 'Password must be at least 8 characters',
-    'string.pattern.base': 'Password must contain at least one uppercase, one lowercase, and one number',
-    'any.required': 'Password is required',
-  }),
-  firstName: Joi.string().min(2).max(50).required().messages({
-    'string.min': 'First name must be at least 2 characters',
-    'any.required': 'First name is required',
-  }),
-  lastName: Joi.string().min(2).max(50).required().messages({
-    'string.min': 'Last name must be at least 2 characters',
-    'any.required': 'Last name is required',
-  }),
+  purpose: Joi.string().valid('Content Creation', 'Bulk SMS Delivery', 'Both').required(),
+  accountType: Joi.string().valid('Individual', 'Organization').required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required(),
+  firstName: Joi.string().min(2).max(50).required(),
+  lastName: Joi.string().min(2).max(50).required(),
 });
+
 
 export const clientLoginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -31,4 +21,20 @@ export const verifyOtpSchema = Joi.object({
     'string.length': 'OTP must be 6 digits',
     'any.required': 'OTP is required',
   }),
+});
+
+
+
+
+export const createMessageSchema = Joi.object({
+  channelId: Joi.number().required(),
+  direction: Joi.string().valid("inbound", "outbound").default("outbound"),
+  type: Joi.string().valid("content", "broadcast", "direct").default("content"),
+  content: Joi.string().min(1).required(),
+  contentType: Joi.string()
+    .valid("text", "image", "video", "audio", "document", "location", "both")
+    .required(),
+  deliveryMethod: Joi.string().valid("sms", "whatsapp", "both").required(),
+  recipients: Joi.array().items(Joi.string()).min(1).optional(),
+  metadata: Joi.object().optional(),
 });
