@@ -3,7 +3,9 @@ import { ClientService } from '../services/client.service';
 import { ResponseUtil } from '../utils/response.util';
 import { clientSignupSchema, clientLoginSchema, verifyOtpSchema, createMessageSchema } from '../validators/client.validator';
 import { AuthRequest } from '../types';
-import { createChannelSchema } from '../validators/channel.validation';
+import { createChannelSchema , createInteractiveSchema} from '../validators/channel.validation';
+import WhatsAppRouteService from '../services/whatsapproute.service';
+import { Channel, Message, WhatsAppRoute } from '../models';
 
 
 export class ClientController {
@@ -188,6 +190,195 @@ export class ClientController {
   }
 
 
+   static async createMessageWithMedia(req: AuthRequest, res: Response) {
+    try {
+      // 1. Check authentication
+      if (!req.user?.id) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      // 2. Check file upload
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded" });
+      }
+
+      const { channelId, caption, contentType } = req.body;
+
+      if (!channelId) {
+        return res.status(400).json({ success: false, message: "channelId is required" });
+      }
+
+      // 3. Verify channel belongs to user
+      const channel = await WhatsAppRoute.findOne({
+        where: { id: channelId, clientId: req.user.id },
+      });
+
+      if (!channel) {
+        return res.status(404).json({ success: false, message: "Channel not found or does not belong to you" });
+      }
+
+      console.log('📤 Uploading media to WhatsApp...');
+
+      // 4. Upload media to WhatsApp and get mediaId
+      const mediaId = await WhatsAppRouteService.uploadMedia({
+        routeId: channel.id,
+        file: req.file,
+        mimeType: req.file.mimetype,
+        filename: req.file.originalname,
+      });
+
+      console.log('✅ Media uploaded. ID:', mediaId);
+
+      // 5. Determine content type
+      const fileContentType = contentType || this.getContentTypeFromMimeType(req.file.mimetype);
+
+      // 6. Create message record in DB
+      const message = await ClientService.createMessageWithMedia(
+        {
+          channelId: parseInt(channelId),
+          caption,
+          fileContentType,
+          mediaId,
+          filename: req.file.originalname,
+        },
+        req.user.id
+      );
+
+      // 7. Respond
+      return res.status(201).json({
+        success: true,
+        message: "Media uploaded and message created successfully",
+        data: { message, mediaId },
+      });
+
+    } catch (err: any) {
+      console.error('Upload media error:', err);
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Failed to upload media",
+      });
+    }
+  }
+
+  static async createInteractiveMessage(req: AuthRequest, res: Response) {
+    try {
+      const { error, value } = createInteractiveSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: error.details[0].message,
+        });
+      }
+
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      // Verify channel
+      const channel = await Channel.findOne({
+        where: { id: value.channelId, clientId: req.user.id },
+      });
+
+      if (!channel) {
+        return res.status(404).json({
+          success: false,
+          message: "Channel not found",
+        });
+      }
+
+      // Build interactive payload based on type
+      const interactivePayload = ClientController.buildInteractivePayload(value);
+
+      // Create message
+      const message = await Message.create({
+        channelId: value.channelId,
+        clientId: req.user.id,
+        direction: 'outbound',
+        type: 'content',
+        content: JSON.stringify(interactivePayload),
+        contentType: 'interactive',
+        status: 'queue',
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Interactive message created successfully",
+        data: message,
+      });
+    } catch (err: any) {
+      console.error('Create interactive message error:', err);
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Internal server error",
+      });
+    }
+  }
+
+
+
+   private static buildInteractivePayload(data: any): any {
+    switch (data.interactiveType) {
+      case 'button':
+        return {
+          type: 'button',
+          header: data.header,
+          body: data.body,
+          footer: data.footer,
+          action: {
+            buttons: data.buttons.map((btn: any) => ({
+              type: 'reply',
+              reply: {
+                id: btn.id,
+                title: btn.title
+              }
+            }))
+          }
+        };
+
+      case 'list':
+        return {
+          type: 'list',
+          header: data.header,
+          body: data.body,
+          footer: data.footer,
+          action: {
+            button: data.buttonText,
+            sections: data.sections
+          }
+        };
+
+      case 'cta_url':
+        return {
+          type: 'cta_url',
+          header: data.header,
+          body: data.body,
+          footer: data.footer,
+          action: {
+            name: 'cta_url',
+            parameters: {
+              display_text: data.ctaDisplayText,
+              url: data.ctaUrl
+            }
+          }
+        };
+
+      default:
+        throw new Error('Invalid interactive type');
+    }
+  }
+
+
+  private static getContentTypeFromMimeType(mimeType: string): 'image' | 'video' | 'audio' | 'document' {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'document';
+  }
+
+
 
 
 
@@ -202,8 +393,6 @@ export class ClientController {
       const user={...value, clientId}
       console.log(user)
       if (error) {
-
-        console.log(error)
         return res.status(400).json({ success: false, message: error.details[0].message });
       }
 

@@ -26,15 +26,120 @@ export const verifyOtpSchema = Joi.object({
 
 
 
+
+
 export const createMessageSchema = Joi.object({
-  channelId: Joi.number().required(),
-  direction: Joi.string().valid("inbound", "outbound").default("outbound"),
-  type: Joi.string().valid("content", "broadcast", "direct").default("content"),
-  content: Joi.string().min(1).required(),
+  direction: Joi.string()
+    .valid("inbound", "outbound")
+    .default("outbound"),
+
+  type: Joi.string()
+    .valid("content", "broadcast")
+    .default("content"),
+
+  content: Joi.string().allow("").optional(),
+
   contentType: Joi.string()
-    .valid("text", "image", "video", "audio", "document", "location", "both")
+    .valid(
+      "text",
+      "image",
+      "video",
+      "audio",
+      "document",
+      "location",
+      "template",
+      "interactive",
+      "both"
+    )
     .required(),
-  deliveryMethod: Joi.string().valid("sms", "whatsapp", "both").required(),
-  recipients: Joi.array().items(Joi.string()).min(1).optional(),
+
+  channelId: Joi.number().optional(),
+  clientId: Joi.number().optional(),
+  subscriberId: Joi.number().optional(),
+  parentMessageId: Joi.number().allow(null).optional(),
+
+  recipients: Joi.array().items(Joi.string()).optional(),
   metadata: Joi.object().optional(),
-});
+  responses: Joi.array().items(Joi.object()).optional(),
+
+  scheduledAt: Joi.date().optional().allow(null),
+
+  // ======================================================
+  // TEMPLATE MESSAGE FIELDS
+  // ======================================================
+  templateName: Joi.string().when("contentType", {
+    is: "template",
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional(),
+  }),
+
+  templateLanguage: Joi.string().default("en_US").optional(),
+
+  templateComponents: Joi.array().items(Joi.object()).when("contentType", {
+    is: "template",
+    then: Joi.array().min(1).required(),
+    otherwise: Joi.array().optional(),
+  }),
+
+  // ======================================================
+  // MEDIA MESSAGE FIELDS
+  // ======================================================
+  mediaUrl: Joi.string().uri().when("contentType", {
+    is: Joi.valid("image", "video", "audio", "document", "both"),
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  mediaId: Joi.string().optional(),
+
+  caption: Joi.string().optional(),
+  filename: Joi.string().optional(),
+
+  // ======================================================
+  // LOCATION MESSAGE FIELDS
+  // ======================================================
+  latitude: Joi.number().when("contentType", {
+    is: "location",
+    then: Joi.number().required(),
+    otherwise: Joi.number().optional(),
+  }),
+
+  longitude: Joi.number().when("contentType", {
+    is: "location",
+    then: Joi.number().required(),
+    otherwise: Joi.number().optional(),
+  }),
+
+  locationName: Joi.string().optional(),
+  locationAddress: Joi.string().optional(),
+
+})
+  // ======================================================
+  // CONDITION: content must be present unless template/interactive/location
+  // ======================================================
+  .custom((value, helpers) => {
+    const type = value.contentType;
+
+    if (
+      ["text", "image", "video", "audio", "document", "both"].includes(type)
+    ) {
+      if (!value.content || value.content.trim() === "") {
+        return helpers.error("any.invalid", {
+          message: "content is required for this contentType",
+        });
+      }
+    }
+
+    if (type === "interactive") {
+      try {
+        JSON.parse(value.content);
+      } catch {
+        return helpers.error("any.invalid", {
+          message: "Interactive content must be valid JSON string",
+        });
+      }
+    }
+
+    return value;
+  });
+

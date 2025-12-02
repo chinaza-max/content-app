@@ -1,7 +1,7 @@
-import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../config/database";
-import { RouteType } from "../enums/channel.enum"; // ✅ reuse same enum as Channel
-import { SubscriberStatus } from "../enums/subscriber.enum"; // ✅ for status consistency
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database';
+import { RouteType } from '../enums/channel.enum';
+import { SubscriberStatus } from '../enums/subscriber.enum';
 
 class Subscriber extends Model {
   public id!: number;
@@ -9,7 +9,7 @@ class Subscriber extends Model {
   public phone!: string;
   public status!: SubscriberStatus;
   public subscriptionType!: RouteType;
-  public metadata?: object;
+  public metadata?: Record<string, any>;
 }
 
 Subscriber.init(
@@ -32,7 +32,7 @@ Subscriber.init(
       type: DataTypes.ENUM(...Object.values(RouteType)),
       allowNull: false,
       defaultValue: RouteType.SMS,
-      comment: "Defines how the subscriber receives messages",
+      comment: 'Defines how the subscriber receives messages',
     },
     status: {
       type: DataTypes.ENUM(...Object.values(SubscriberStatus)),
@@ -42,13 +42,13 @@ Subscriber.init(
     metadata: {
       type: DataTypes.JSON,
       allowNull: true,
-      comment: "Optional extra subscriber info, e.g., email, preferences, tags, etc.",
+      comment: 'Optional extra subscriber info (email, preferences, tags, etc.)',
     },
   },
   {
     sequelize,
-    modelName: "subscriber",
-    tableName: "subscribers",
+    modelName: 'subscriber',
+    tableName: 'subscribers',
     timestamps: true,
   }
 );

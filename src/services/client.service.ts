@@ -6,6 +6,7 @@ import { Op } from 'sequelize';
 import { PurposeEnum, AccountTypeEnum } from '../constants/client.enums';
 import { ChannelAttributes, ChannelCreationAttributes } from '../models/channel.model';
 import { RouteType } from '../enums/channel.enum';
+import { MessageContentType } from '../types';
 
 
 export class ClientService {
@@ -273,6 +274,40 @@ export class ClientService {
     return message;
   }
 
+
+
+ static async createMessageWithMedia(
+    data: {
+      channelId: number;
+      caption?: string;
+      fileContentType: MessageContentType;
+      mediaId: string;
+      filename: string;
+    },
+    clientId: number
+  ) {
+    const { channelId, caption, fileContentType, mediaId, filename } = data;
+
+    // Ensure channel exists
+    const channel = await Channel.findByPk(channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    // Create message record
+    const message = await Message.create({
+      channelId,
+      clientId,
+      direction: 'outbound',
+      type: 'content',
+      content: caption || `${fileContentType} message`,
+      contentType: fileContentType,
+      mediaId,
+      caption,
+      filename,
+      status: 'queue',
+    });
+
+    return message;
+  }
   // fetch messages to process by cron
   static async getPendingMessages(limit = 50) {
     return Message.findAll({ where: { status: "pending" }, limit });

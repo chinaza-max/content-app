@@ -2,12 +2,17 @@ import { Router } from 'express';
 import adminRoutes from './admin.routes';
 import clientRoutes from './client.routes';
 import smsRoutes from './smsroute.routes';
+import whatsappRoutes from './whatsapproute.routes';
+import subscriberRoutes from './subscriber.routes';
 
 const router = Router();
 
 router.use('/admin', adminRoutes);
 router.use('/client', clientRoutes);
 router.use('/sms', smsRoutes);
+router.use('/whatsapp', whatsappRoutes);
+router.use('/subscribers', subscriberRoutes);
+
 
 
 router.get('/', (req, res) => {

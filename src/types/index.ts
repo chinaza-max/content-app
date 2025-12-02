@@ -33,6 +33,8 @@ export interface AuthRequest extends Request {
     email: string;
     role: 'admin' | 'client';
   };
+  file?: Express.Multer.File; // Add this line
+
 }
 
 export interface ApiResponse<T = any> {
@@ -41,3 +43,20 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
 }
+
+
+// types/MessageTypes.ts
+
+export const MESSAGE_CONTENT_TYPES = [
+  "text",
+  "image",
+  "video",
+  "audio",
+  "document",
+  "location",
+  "template",
+  "interactive",
+  
+] as const;
+
+export type MessageContentType = typeof MESSAGE_CONTENT_TYPES[number];

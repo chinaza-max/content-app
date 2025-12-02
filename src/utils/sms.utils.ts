@@ -19,3 +19,5 @@ export const evaluateSuccess = (data: any, matchRule?: string): boolean => {
   const actual = matchRule.split('.').reduce((acc, k) => acc?.[k], data);
   return actual !== undefined && actual !== null;
 };
+
+

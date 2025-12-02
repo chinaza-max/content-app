@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ClientController } from '../controllers/client.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
+import { upload } from "../config/multer.config";
 
 
 
@@ -31,9 +32,21 @@ router.delete("/channel/:id", AuthMiddleware.verifyClient, ClientController.dele
 
 
 //CONTENT
-router.post("/create",AuthMiddleware.verifyClient, ClientController.createMessage);
+router.post("/create",
+      upload.single("image")
+    ,AuthMiddleware.verifyClient, ClientController.createMessage);
 
 
+router.post("/upload-media",
+    upload.single('file'),
+    AuthMiddleware.verifyClient, ClientController.createMessageWithMedia);
+
+
+router.post(
+  '/interactive',
+  AuthMiddleware.verifyClient,
+  ClientController.createInteractiveMessage
+);
 
 
 
